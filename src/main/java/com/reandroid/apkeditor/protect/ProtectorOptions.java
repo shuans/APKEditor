@@ -79,10 +79,6 @@ public class ProtectorOptions extends Options {
             description = "Optional signing keystore type, for example PKCS12")
     public String signStoretype;
 
-    @OptionArg(name = "-jarsigner",
-            description = "Path to jarsigner. Defaults to jarsigner on PATH")
-    public File jarsigner;
-
     @OptionArg(name = "-dic-dir-names", description = "protect_dic_dir_name")
     public File dic_dir_name;
 

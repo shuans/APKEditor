@@ -427,7 +427,6 @@ Options:
   -sign-storepass-env   Environment variable containing the keystore password.
   -sign-keypass-env     Optional environment variable containing the key password.
   -sign-storetype       Optional keystore type, for example PKCS12.
-  -jarsigner            Path to jarsigner. Defaults to jarsigner on PATH.
   -keep-dynamic-resources
                         Preserves resource files referenced by literal
                         Resources.getIdentifier(name, type, package) calls.

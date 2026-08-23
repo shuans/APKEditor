@@ -160,7 +160,7 @@ final class AabProtector {
             requireEnvironment(options.signKeypassEnv, "-sign-keypass-env");
         }
         List<String> command = new ArrayList<>();
-        command.add(options.jarsigner == null ? "jarsigner" : options.jarsigner.getAbsolutePath());
+        command.add(resolveJarsigner().toString());
         command.add("-keystore");
         command.add(options.signKeystore.getAbsolutePath());
         if (!isEmpty(options.signStoretype)) {
@@ -187,7 +187,16 @@ final class AabProtector {
     private boolean hasSigningOption() {
         return options.signKeystore != null || !isEmpty(options.signAlias) ||
                 !isEmpty(options.signStorepassEnv) || !isEmpty(options.signKeypassEnv) ||
-                !isEmpty(options.signStoretype) || options.jarsigner != null;
+                !isEmpty(options.signStoretype);
+    }
+    private static Path resolveJarsigner() throws IOException {
+        String executable = System.getProperty("os.name", "").toLowerCase(Locale.ROOT)
+                .contains("win") ? "jarsigner.exe" : "jarsigner";
+        Path jarsigner = new File(System.getProperty("java.home"), "bin/" + executable).toPath();
+        if (!Files.isRegularFile(jarsigner) || !Files.isExecutable(jarsigner)) {
+            throw new IOException("jarsigner is missing from the current JDK: " + jarsigner);
+        }
+        return jarsigner;
     }
     private static boolean isEmpty(String value) {
         return value == null || value.length() == 0;
