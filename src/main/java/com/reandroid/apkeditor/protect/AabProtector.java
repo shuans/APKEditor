@@ -60,8 +60,8 @@ final class AabProtector {
             }
             deleteTree(extracted.resolve("META-INF"));
             zipDirectory(extracted, options.outputFile.toPath());
-            protector.logMessage("Saved unsigned AAB to: " + options.outputFile);
-            protector.logMessage("AAB signatures were removed; sign the output with jarsigner before publishing.");
+            signOutputIfConfigured();
+            protector.logMessage("Saved AAB to: " + options.outputFile);
         } finally {
             if (workDirectory != null) {
                 deleteTree(workDirectory);
@@ -146,12 +146,68 @@ final class AabProtector {
         return executable;
     }
 
+    private void signOutputIfConfigured() throws IOException {
+        if (!hasSigningOption()) {
+            protector.logMessage("AAB signatures were removed; output is unsigned.");
+            return;
+        }
+        if (options.signKeystore == null || !options.signKeystore.isFile() ||
+                isEmpty(options.signAlias) || isEmpty(options.signStorepassEnv)) {
+            throw new IOException("AAB signing requires -sign-keystore, -sign-alias, and -sign-storepass-env.");
+        }
+        requireEnvironment(options.signStorepassEnv, "-sign-storepass-env");
+        if (!isEmpty(options.signKeypassEnv)) {
+            requireEnvironment(options.signKeypassEnv, "-sign-keypass-env");
+        }
+        List<String> command = new ArrayList<>();
+        command.add(options.jarsigner == null ? "jarsigner" : options.jarsigner.getAbsolutePath());
+        command.add("-keystore");
+        command.add(options.signKeystore.getAbsolutePath());
+        if (!isEmpty(options.signStoretype)) {
+            command.add("-storetype");
+            command.add(options.signStoretype);
+        }
+        command.add("-storepass:env");
+        command.add(options.signStorepassEnv);
+        if (!isEmpty(options.signKeypassEnv)) {
+            command.add("-keypass:env");
+            command.add(options.signKeypassEnv);
+        }
+        command.add(options.outputFile.getAbsolutePath());
+        command.add(options.signAlias);
+        runProcess(command, "jarsigner");
+        List<String> verify = new ArrayList<>();
+        verify.add(command.get(0));
+        verify.add("-verify");
+        verify.add(options.outputFile.getAbsolutePath());
+        runProcess(verify, "jarsigner verification");
+        protector.logMessage("Signed AAB with alias: " + options.signAlias);
+    }
+
+    private boolean hasSigningOption() {
+        return options.signKeystore != null || !isEmpty(options.signAlias) ||
+                !isEmpty(options.signStorepassEnv) || !isEmpty(options.signKeypassEnv) ||
+                !isEmpty(options.signStoretype) || options.jarsigner != null;
+    }
+    private static boolean isEmpty(String value) {
+        return value == null || value.length() == 0;
+    }
+    private static void requireEnvironment(String name, String option) throws IOException {
+        if (isEmpty(System.getenv(name))) {
+            throw new IOException(option + " references an unset or empty environment variable: " + name);
+        }
+    }
+
     private void runAapt2(Path executable, String... args) throws IOException {
         List<String> command = new ArrayList<>();
         command.add(executable.toString());
         for (String arg : args) {
             command.add(arg);
         }
+        runProcess(command, "aapt2");
+    }
+
+    private static void runProcess(List<String> command, String name) throws IOException {
         Process process = new ProcessBuilder(command).redirectErrorStream(true).start();
         StringBuilder output = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
@@ -165,11 +221,11 @@ final class AabProtector {
         try {
             int code = process.waitFor();
             if (code != 0) {
-                throw new IOException("aapt2 failed (exit " + code + "): " + output);
+                throw new IOException(name + " failed (exit " + code + "): " + output);
             }
         } catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            throw new IOException("Interrupted while running aapt2", exception);
+            throw new IOException("Interrupted while running " + name, exception);
         }
     }
 

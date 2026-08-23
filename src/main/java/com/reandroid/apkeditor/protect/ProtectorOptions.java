@@ -59,6 +59,30 @@ public class ProtectorOptions extends Options {
             description = "Path to bundletool-all.jar used to extract aapt2 when protecting an AAB")
     public File bundletool;
 
+    @OptionArg(name = "-sign-keystore",
+            description = "Keystore used to sign protected AAB output")
+    public File signKeystore;
+
+    @OptionArg(name = "-sign-alias",
+            description = "Keystore alias used to sign protected AAB output")
+    public String signAlias;
+
+    @OptionArg(name = "-sign-storepass-env",
+            description = "Environment variable containing the signing keystore password")
+    public String signStorepassEnv;
+
+    @OptionArg(name = "-sign-keypass-env",
+            description = "Environment variable containing the signing key password")
+    public String signKeypassEnv;
+
+    @OptionArg(name = "-sign-storetype",
+            description = "Optional signing keystore type, for example PKCS12")
+    public String signStoretype;
+
+    @OptionArg(name = "-jarsigner",
+            description = "Path to jarsigner. Defaults to jarsigner on PATH")
+    public File jarsigner;
+
     @OptionArg(name = "-dic-dir-names", description = "protect_dic_dir_name")
     public File dic_dir_name;
 

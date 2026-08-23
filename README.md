@@ -422,6 +422,12 @@ Options:
                         unless -bundletool is specified.
   -bundletool           Path to bundletool-all.jar. APKEditor extracts the
                         host aapt2 binary from it for AAB input.
+  -sign-keystore        Keystore used to sign protected AAB output.
+  -sign-alias           Keystore alias used to sign protected AAB output.
+  -sign-storepass-env   Environment variable containing the keystore password.
+  -sign-keypass-env     Optional environment variable containing the key password.
+  -sign-storetype       Optional keystore type, for example PKCS12.
+  -jarsigner            Path to jarsigner. Defaults to jarsigner on PATH.
   -keep-dynamic-resources
                         Preserves resource files referenced by literal
                         Resources.getIdentifier(name, type, package) calls.
@@ -445,11 +451,17 @@ Examples:
   2)  [AAB]
     java -jar APKEditor.jar p -i path/input.aab -o path/output.aab \
       -bundletool path/to/bundletool-all.jar -keep-dynamic-resources
+  3)  [Signed AAB]
+    SIGN_STOREPASS=secret SIGN_KEYPASS=secret java -jar APKEditor.jar p \
+      -i path/input.aab -o path/output.aab -bundletool path/to/bundletool-all.jar \
+      -sign-keystore path/to/release.jks -sign-alias release \
+      -sign-storepass-env SIGN_STOREPASS -sign-keypass-env SIGN_KEYPASS
 ```
 
 For AAB input, APKEditor keeps the bundle format valid by protecting resource file names
 only. It intentionally skips malformed manifest/table chunks and resource-directory moves,
-then removes the old JAR signatures. Sign the generated AAB with `jarsigner` before upload.
+then removes the old JAR signatures. Provide all required `-sign-*` options to sign the
+generated AAB in place; otherwise it remains unsigned.
 </details>
 </details>
 
