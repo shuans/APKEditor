@@ -65,6 +65,9 @@ public abstract class Confuser implements APKLogger {
     public boolean isKeepAllTypes() {
         return getOptions().isKeepAllTypes();
     }
+    public boolean isKeepResource(String type, String name) {
+        return getProtector().getResourceKeepPolicy().isKeep(type, name);
+    }
     public Protector getProtector() {
         return protector;
     }

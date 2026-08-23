@@ -52,7 +52,9 @@ public class FileNameConfuser extends Confuser {
         }
     }
     private String generateNewPath(ResFile resFile) {
-        if (isKeepType(resFile.pickOne().getTypeName())) {
+        String type = resFile.pickOne().getTypeName();
+        String name = resFile.pickOne().getName();
+        if (isKeepType(type) || isKeepResource(type, name)) {
             return null;
         }
         return generateNewPath(resFile.getFilePath());

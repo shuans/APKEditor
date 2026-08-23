@@ -381,7 +381,8 @@ Examples:
 </details>
 
 #### 5- Protect
-Protects apk resources against almost all known decompile/modify tools.
+Protects APK resources against almost all known decompile/modify tools. It also supports
+AAB resource-file protection through `aapt2` conversion.
 <details> <summary><code>java -jar APKEditor.jar <b>p</b> -i path/to/input.apk</code></summary>
 
  ```ShellSession
@@ -417,6 +418,14 @@ Options:
   -dic-file-names       Path to a text file containing a list of file names
                         separated by new line.
   -i                    Input path.
+  -aapt2                Path to an aapt2 executable. Required for AAB input
+                        unless -bundletool is specified.
+  -bundletool           Path to bundletool-all.jar. APKEditor extracts the
+                        host aapt2 binary from it for AAB input.
+  -keep-dynamic-resources
+                        Preserves resource files referenced by literal
+                        Resources.getIdentifier(name, type, package) calls.
+                        Fails when a name or type cannot be resolved safely.
   -keep-type            Keep specific resource type names (e.g drawable), By
                         default keeps only <font> resource type.
                          *Can be multiple
@@ -433,7 +442,14 @@ Flags:
 Examples:
   1)  [Basic]
     java -jar APKEditor.jar p -i path/input.apk -o path/output.apk
+  2)  [AAB]
+    java -jar APKEditor.jar p -i path/input.aab -o path/output.aab \
+      -bundletool path/to/bundletool-all.jar -keep-dynamic-resources
 ```
+
+For AAB input, APKEditor keeps the bundle format valid by protecting resource file names
+only. It intentionally skips malformed manifest/table chunks and resource-directory moves,
+then removes the old JAR signatures. Sign the generated AAB with `jarsigner` before upload.
 </details>
 </details>
 

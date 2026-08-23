@@ -82,7 +82,7 @@ public class TableConfuser extends Confuser {
     }
 
     private String getReplacement(String type) {
-        if (isKeepType(type)) {
+        if (isKeepType(type) || getProtector().getResourceKeepPolicy().isKeepType(type)) {
             return type;
         }
 

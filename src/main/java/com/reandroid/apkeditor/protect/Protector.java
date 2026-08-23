@@ -19,11 +19,14 @@ import com.reandroid.apkeditor.CommandExecutor;
 import com.reandroid.apkeditor.Util;
 import com.reandroid.apk.*;
 
+import java.io.File;
 import java.io.IOException;
 
 public class Protector extends CommandExecutor<ProtectorOptions> {
 
     private ApkModule mApkModule;
+    private ResourceKeepPolicy resourceKeepPolicy = ResourceKeepPolicy.empty();
+    private boolean aabSafeMode;
 
     public Protector(ProtectorOptions options) {
         super(options, "[PROTECT] ");
@@ -36,6 +39,12 @@ public class Protector extends CommandExecutor<ProtectorOptions> {
     public void setApkModule(ApkModule apkModule) {
         this.mApkModule = apkModule;
     }
+    public ResourceKeepPolicy getResourceKeepPolicy() {
+        return resourceKeepPolicy;
+    }
+    public boolean isAabSafeMode() {
+        return aabSafeMode;
+    }
 
     @Override
     public ProtectorOptions getOptions() {
@@ -46,29 +55,53 @@ public class Protector extends CommandExecutor<ProtectorOptions> {
     public void runCommand() throws IOException {
         ProtectorOptions options = getOptions();
         delete(options.outputFile);
-        ApkModule module = ApkModule.loadApkFile(this, options.inputFile);
-        module.setLoadDefaultFramework(false);
-        String protect = Util.isProtected(module);
-        if(protect != null){
-            logMessage(options.inputFile.getAbsolutePath());
-            logMessage(protect);
+        if (isAab(options.inputFile)) {
+            new AabProtector(this).protect();
             return;
         }
-        setApkModule(module);
-        new ManifestConfuser(this).confuse();
-        new DirectoryConfuser(this).confuse();
-        new FileNameConfuser(this).confuse();
-        new TableConfuser(this).confuse();
-        new DexConfuser(this).confuse();
-        module.getTableBlock().refresh();
-        logMessage("Writing apk ...");
-        if (options.confuse_zip) {
-            logMessage("Confusing zip structure ...");
-            new ProtectedFileWriter(module, options.outputFile).write();
-        } else {
-            module.writeApk(options.outputFile);
+        protectApk(options.inputFile, options.outputFile, false);
+    }
+
+    void protectApk(File inputFile, File outputFile, boolean aabSafeMode) throws IOException {
+        ProtectorOptions options = getOptions();
+        this.aabSafeMode = aabSafeMode;
+        ApkModule module = ApkModule.loadApkFile(this, inputFile);
+        try {
+            module.setLoadDefaultFramework(false);
+            String protect = Util.isProtected(module);
+            if(protect != null){
+                throw new IOException(inputFile.getAbsolutePath() + ": " + protect);
+            }
+            setApkModule(module);
+            resourceKeepPolicy = ResourceKeepPolicy.create(this, module);
+            if (aabSafeMode) {
+                logMessage("AAB safe mode: skipping manifest, directory, and table chunk protection");
+            } else {
+                new ManifestConfuser(this).confuse();
+                new DirectoryConfuser(this).confuse();
+            }
+            new FileNameConfuser(this).confuse();
+            if (!aabSafeMode) {
+                new TableConfuser(this).confuse();
+            }
+            new DexConfuser(this).confuse();
+            module.getTableBlock().refresh();
+            logMessage("Writing apk ...");
+            if (options.confuse_zip) {
+                logMessage("Confusing zip structure ...");
+                new ProtectedFileWriter(module, outputFile).write();
+            } else {
+                module.writeApk(outputFile);
+            }
+            logMessage("Saved to: " + outputFile);
+        } finally {
+            resourceKeepPolicy = ResourceKeepPolicy.empty();
+            setApkModule(null);
+            this.aabSafeMode = false;
+            module.close();
         }
-        module.close();
-        logMessage("Saved to: " + options.outputFile);
+    }
+    private static boolean isAab(File file) {
+        return file.getName().toLowerCase().endsWith(".aab");
     }
 }

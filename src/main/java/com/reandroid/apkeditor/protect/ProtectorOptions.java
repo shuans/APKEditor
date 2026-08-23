@@ -47,6 +47,18 @@ public class ProtectorOptions extends Options {
     @OptionArg(name = "-keep-type", description = "protect_keep_type")
     public final Set<String> keepTypes = new HashSet<>();
 
+    @OptionArg(name = "-keep-dynamic-resources", flag = true,
+            description = "Keep literal Resources.getIdentifier(name, type, package) targets")
+    public boolean keepDynamicResources;
+
+    @OptionArg(name = "-aapt2",
+            description = "Path to aapt2. Required when protecting an AAB unless -bundletool is set")
+    public File aapt2;
+
+    @OptionArg(name = "-bundletool",
+            description = "Path to bundletool-all.jar used to extract aapt2 when protecting an AAB")
+    public File bundletool;
+
     @OptionArg(name = "-dic-dir-names", description = "protect_dic_dir_name")
     public File dic_dir_name;
 
@@ -90,6 +102,9 @@ public class ProtectorOptions extends Options {
 
     @Override
     public File generateOutputFromInput(File input) {
+        if (input.getName().toLowerCase().endsWith(".aab")) {
+            return generateOutputFromInput(input, "_protected.aab");
+        }
         return generateOutputFromInput(input, "_protected.apk");
     }
 
