@@ -112,7 +112,7 @@ public final class ResourceKeepPolicy {
                 }
             } else if (isGetIdentifier(instruction)) {
                 inspectGetIdentifier(classDef, method, index, instruction, strings, unresolved);
-            } else if (opcode.setsRegister && instruction instanceof OneRegisterInstruction) {
+            } else if (opcode.setsRegister() && instruction instanceof OneRegisterInstruction) {
                 strings.remove(((OneRegisterInstruction) instruction).getRegisterA());
             }
             index++;
