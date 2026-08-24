@@ -430,7 +430,10 @@ Options:
   -keep-dynamic-resources
                         Preserves resource files referenced by literal
                         Resources.getIdentifier(name, type, package) calls.
-                        Fails when a name or type cannot be resolved safely.
+                        Logs unresolved calls that cannot be resolved safely.
+  -keep-dynamic-resources-strict
+                        Fail when any Resources.getIdentifier(name, type,
+                        package) call cannot be resolved safely.
   -keep-type            Keep specific resource type names (e.g drawable), By
                         default keeps only <font> resource type.
                          *Can be multiple

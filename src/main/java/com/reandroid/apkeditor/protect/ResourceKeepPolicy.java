@@ -56,10 +56,16 @@ public final class ResourceKeepPolicy {
         for (DexFileInputSource source : module.listDexFiles()) {
             result.scanDex(source, unresolved);
         }
-        if (!unresolved.isEmpty()) {
+        if (!unresolved.isEmpty() && protector.getOptions().keepDynamicResourcesStrict) {
             throw new IOException("Cannot safely protect dynamic resources. " +
                     "Unresolved Resources.getIdentifier call(s): " + join(unresolved) +
-                    ". Resolve the name/type to const-string values or run without -keep-dynamic-resources.");
+                    ". Resolve the name/type to const-string values or run without " +
+                    "-keep-dynamic-resources-strict.");
+        }
+        if (!unresolved.isEmpty()) {
+            protector.logMessage("WARN: Unresolved Resources.getIdentifier call(s): " +
+                    join(unresolved) + ". These dynamic targets cannot be preserved by name. " +
+                    "Use -keep-dynamic-resources-strict to fail on unresolved calls.");
         }
         protector.logMessage("Dynamic resources kept: " + result.resources.size() +
                 ", resource types kept: " + result.types.size());
