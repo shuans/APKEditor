@@ -94,9 +94,21 @@ public final class ResourceKeepPolicy {
             return;
         }
         Map<Integer, String> strings = new HashMap<>();
+        Set<Integer> systemResources = new LinkedHashSet<>();
+        boolean pendingSystemResourcesResult = false;
         int index = 0;
         for (Instruction instruction : implementation.getInstructions()) {
             Opcode opcode = instruction.getOpcode();
+            if (isMoveResultObject(instruction)) {
+                int register = ((OneRegisterInstruction) instruction).getRegisterA();
+                if (pendingSystemResourcesResult) {
+                    systemResources.add(register);
+                } else {
+                    systemResources.remove(register);
+                }
+            } else if (opcode.setsRegister() && instruction instanceof OneRegisterInstruction) {
+                systemResources.remove(((OneRegisterInstruction) instruction).getRegisterA());
+            }
             if (opcode == Opcode.CONST_STRING || opcode == Opcode.CONST_STRING_JUMBO) {
                 Reference reference = ((ReferenceInstruction) instruction).getReference();
                 strings.put(((OneRegisterInstruction) instruction).getRegisterA(),
@@ -110,21 +122,30 @@ public final class ResourceKeepPolicy {
                 } else {
                     strings.put(move.getRegisterA(), value);
                 }
+                if (systemResources.contains(move.getRegisterB())) {
+                    systemResources.add(move.getRegisterA());
+                }
             } else if (isGetIdentifier(instruction)) {
-                inspectGetIdentifier(classDef, method, index, instruction, strings, unresolved);
+                inspectGetIdentifier(classDef, method, index, instruction, strings,
+                        systemResources, unresolved);
             } else if (opcode.setsRegister() && instruction instanceof OneRegisterInstruction) {
                 strings.remove(((OneRegisterInstruction) instruction).getRegisterA());
             }
+            pendingSystemResourcesResult = isResourcesGetSystem(instruction);
             index++;
         }
     }
 
     private void inspectGetIdentifier(ClassDef classDef, Method method, int index,
                                       Instruction instruction, Map<Integer, String> strings,
+                                      Set<Integer> systemResources,
                                       List<String> unresolved) {
         int[] registers = getInvokeRegisters(instruction);
         if (registers == null || registers.length != 4) {
             unresolved.add(location(classDef, method, index) + " has an unsupported invoke form");
+            return;
+        }
+        if (systemResources.contains(registers[0])) {
             return;
         }
         String packageName = strings.get(registers[3]);
@@ -138,6 +159,25 @@ public final class ResourceKeepPolicy {
             return;
         }
         resources.add(new ResourceName(type, name));
+    }
+
+    private static boolean isMoveResultObject(Instruction instruction) {
+        return instruction.getOpcode() == Opcode.MOVE_RESULT_OBJECT &&
+                instruction instanceof OneRegisterInstruction;
+    }
+
+    private static boolean isResourcesGetSystem(Instruction instruction) {
+        if (!(instruction instanceof ReferenceInstruction)) {
+            return false;
+        }
+        Reference reference = ((ReferenceInstruction) instruction).getReference();
+        if (!(reference instanceof MethodReference)) {
+            return false;
+        }
+        MethodReference method = (MethodReference) reference;
+        return RESOURCES_CLASS.equals(method.getDefiningClass()) &&
+                "getSystem".equals(method.getName()) &&
+                method.getParameterTypes().isEmpty();
     }
 
     private static boolean isInScanScope(ClassDef classDef, Set<String> packagePrefixes) {
