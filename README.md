@@ -429,11 +429,13 @@ Options:
   -sign-storetype       Optional keystore type, for example PKCS12.
   -keep-dynamic-resources
                         Preserves resource files referenced by literal
-                        Resources.getIdentifier(name, type, package) calls.
-                        Logs unresolved calls that cannot be resolved safely.
-  -keep-dynamic-resources-strict
-                        Fail when any Resources.getIdentifier(name, type,
-                        package) call cannot be resolved safely.
+                        Resources.getIdentifier(name, type, package) calls,
+                        keeps all resource type names unchanged, and fails on
+                        unresolved calls in the scan scope.
+  -dynamic-resource-scan-package
+                        Limits dynamic-resource scanning to a Java package
+                        prefix. Can be specified multiple times. Resource type
+                        names remain unchanged for the full application.
   -keep-type            Keep specific resource type names (e.g drawable), By
                         default keeps only <font> resource type.
                          *Can be multiple

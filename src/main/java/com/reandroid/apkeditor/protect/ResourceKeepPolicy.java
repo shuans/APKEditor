@@ -38,7 +38,6 @@ public final class ResourceKeepPolicy {
     private static final String RESOURCES_CLASS = "Landroid/content/res/Resources;";
 
     private final Set<ResourceName> resources = new LinkedHashSet<>();
-    private final Set<String> types = new LinkedHashSet<>();
 
     private ResourceKeepPolicy() {
     }
@@ -54,21 +53,16 @@ public final class ResourceKeepPolicy {
         ResourceKeepPolicy result = new ResourceKeepPolicy();
         List<String> unresolved = new ArrayList<>();
         for (DexFileInputSource source : module.listDexFiles()) {
-            result.scanDex(source, unresolved);
-        }
-        if (!unresolved.isEmpty() && protector.getOptions().keepDynamicResourcesStrict) {
-            throw new IOException("Cannot safely protect dynamic resources. " +
-                    "Unresolved Resources.getIdentifier call(s): " + join(unresolved) +
-                    ". Resolve the name/type to const-string values or run without " +
-                    "-keep-dynamic-resources-strict.");
+            result.scanDex(source, unresolved,
+                    protector.getOptions().dynamicResourceScanPackages);
         }
         if (!unresolved.isEmpty()) {
-            protector.logMessage("WARN: Unresolved Resources.getIdentifier call(s): " +
-                    join(unresolved) + ". These dynamic targets cannot be preserved by name. " +
-                    "Use -keep-dynamic-resources-strict to fail on unresolved calls.");
+            throw new IOException("Cannot safely protect dynamic resources. " +
+                    "Unresolved Resources.getIdentifier call(s): " + join(unresolved) +
+                    ". Resolve the name/type to const-string values, or narrow the scan with " +
+                    "-dynamic-resource-scan-package.");
         }
-        protector.logMessage("Dynamic resources kept: " + result.resources.size() +
-                ", resource types kept: " + result.types.size());
+        protector.logMessage("Dynamic resources kept: " + result.resources.size());
         return result;
     }
 
@@ -78,15 +72,15 @@ public final class ResourceKeepPolicy {
         }
         return resources.contains(new ResourceName(type, name));
     }
-    public boolean isKeepType(String type) {
-        return types.contains(type);
-    }
-
-    private void scanDex(DexFileInputSource source, List<String> unresolved) throws IOException {
+    private void scanDex(DexFileInputSource source, List<String> unresolved,
+                         Set<String> packagePrefixes) throws IOException {
         try (InputStream inputStream = source.openStream()) {
             DexBackedDexFile dexFile = DexBackedDexFile.fromInputStream(
                     Opcodes.getDefault(), inputStream);
             for (ClassDef classDef : dexFile.getClasses()) {
+                if (!isInScanScope(classDef, packagePrefixes)) {
+                    continue;
+                }
                 for (Method method : classDef.getMethods()) {
                     scanMethod(classDef, method, unresolved);
                 }
@@ -144,7 +138,23 @@ public final class ResourceKeepPolicy {
             return;
         }
         resources.add(new ResourceName(type, name));
-        types.add(type);
+    }
+
+    private static boolean isInScanScope(ClassDef classDef, Set<String> packagePrefixes) {
+        if (packagePrefixes.isEmpty()) {
+            return true;
+        }
+        String className = classDef.getType();
+        for (String prefix : packagePrefixes) {
+            String descriptorPrefix = "L" + prefix.replace('.', '/').replace('\\', '/');
+            if (!descriptorPrefix.endsWith("/")) {
+                descriptorPrefix += "/";
+            }
+            if (className.startsWith(descriptorPrefix)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isGetIdentifier(Instruction instruction) {

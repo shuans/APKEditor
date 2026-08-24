@@ -59,8 +59,8 @@ public class TableConfuser extends Confuser {
         tableBlock.refresh();
     }
     private void confuseTypeNames() {
-        if (isKeepAllTypes()) {
-            logMessage("Skip type names");
+        if (isKeepAllTypes() || getOptions().keepDynamicResources) {
+            logMessage("Skip type names: dynamic resource protection requires original type names");
             return;
         }
         logMessage("Type names ...");
@@ -82,7 +82,7 @@ public class TableConfuser extends Confuser {
     }
 
     private String getReplacement(String type) {
-        if (isKeepType(type) || getProtector().getResourceKeepPolicy().isKeepType(type)) {
+        if (isKeepType(type)) {
             return type;
         }
 

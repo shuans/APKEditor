@@ -51,9 +51,9 @@ public class ProtectorOptions extends Options {
             description = "Keep literal Resources.getIdentifier(name, type, package) targets")
     public boolean keepDynamicResources;
 
-    @OptionArg(name = "-keep-dynamic-resources-strict", flag = true,
-            description = "Fail if any Resources.getIdentifier call cannot be resolved")
-    public boolean keepDynamicResourcesStrict;
+    @OptionArg(name = "-dynamic-resource-scan-package",
+            description = "Package prefix to scan for dynamic resources; can be specified multiple times")
+    public final Set<String> dynamicResourceScanPackages = new HashSet<>();
 
     @OptionArg(name = "-aapt2",
             description = "Path to aapt2. Required when protecting an AAB unless -bundletool is set")
